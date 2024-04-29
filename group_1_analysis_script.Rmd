@@ -1,0 +1,329 @@
+---
+title: "Social Science Research Methods Analysis Script: Group 1"
+subtitle: "Thinking about whether income causes democracy"
+output: html_document
+date: "2024-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This script is designed to help you analyse the data on development and democracy for the Social Science Research Methods class at the University of Sydney. You can follow along by running the code in the script! I'll guide you through the analysis step-by-step.
+
+Ask questions whenever you need!
+
+You can also use this document in a pre-printed form to follow the class in case there are technical problems with R and RStudio, but it's much better to follow along in RStudio if you can.
+
+## Prepare the data
+
+```{r}
+
+# First we need to install some "packages" that enable the data to manipulated, plotted, and examined (not done in this script)
+
+
+#install.packages("ggplot2")
+#install.packages("tidyverse")
+#install.packages('Hmisc', repos='http://cran.us.r-project.org')
+#install.packages('margins')
+#install.packages("ggcorrplot")
+
+# Now we need to load these packages into R
+require("tidyverse")
+require("Hmisc")
+require("margins")
+require("ggplot2")
+require("ggcorrplot")
+
+```
+
+
+### Load the data
+
+```{r}
+
+modernization_data <- read.csv("vdem_group_1.csv")
+
+```
+
+
+## Getting to know the data
+
+In this section, we explore the structure of the data, including the number of observations, the names of the variables, and summaries of means and range of the variables. 
+
+### Questions to think about as you examine the results:
+* How many observations do we have?
+* What countries do you have in the sample and over what time periods are they observed?
+* How are these variables measured? What are the units of measurement?
+* Would you measure these in different ways?
+
+
+
+```{r}
+
+# How many observations do we have?
+nrow(modernization_data)
+
+# What are the names of our columns (i.e) what variables do we have?
+names(modernization_data)
+
+# View the data in an excel-like format
+view(modernization_data)
+
+# What countries and years do you have in your sample?
+ggplot(modernization_data, aes(y=country_name, x=as.integer(year), fill=v2x_polyarchy)) + 
+  geom_tile() + 
+  scale_fill_viridis_c() +
+  theme_minimal()
+
+```
+
+## Descriptive statistics
+
+In this section we explore the mean, median, and range of variables in your sample. We also look at how polyarchy and GDP per capita have changed over time in your sample. 
+
+### Questions to think about as you examine the results:
+* Has this sample been mostly democratic or autocratic?
+* Has it been mostly rich or poor?
+* What are the key transition points for democracy?
+
+```{r}
+
+# Summarise all of the variables in the data
+summary(modernization_data)
+
+# Plot a histogram of the Polyarchy score using ggplot2
+ggplot(modernization_data, aes(x = v2x_polyarchy)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black") +
+  labs(title = "Histogram of Polyarchy Score", x = "Polyarchy Score", y = "Frequency") +
+  theme_minimal()
+
+# Plot a histogram of GDP per capita using ggplot2
+ggplot(modernization_data, aes(x = e_gdppc)) +
+  geom_histogram(binwidth = 1, fill = "green", color = "black") +
+  labs(title = "Histogram of GDP per Capita", x = "GDP per Capita", y = "Frequency") +
+  theme_minimal()
+
+# How has the polyarchy score changed over time in your region?
+
+ggplot(modernization_data %>%
+         group_by(year) %>%
+         summarise(mean_polyarchy=mean(v2x_polyarchy, na.rm=T)), 
+       aes(x=year, y=mean_polyarchy)) + 
+    geom_line() + theme_minimal()
+
+
+# How has the polyarchy score changed over time in your sample?
+
+ggplot(modernization_data, aes(x=year, y=v2x_polyarchy, colour=v2x_polyarchy)) +
+  geom_point() +
+  scale_colour_viridis_c() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  theme_minimal()
+
+# How has development changed over time in your region?
+
+ggplot(modernization_data %>%
+         group_by(year) %>%
+         summarise(mean_gdppc=mean(e_gdppc, na.rm=T)), 
+       aes(x=year, y=mean_gdppc)) + 
+  geom_line() + theme_minimal()
+
+
+# How has the GDP per capita changed over time in your sample?
+
+ggplot(modernization_data, aes(x=year, y=e_gdppc, colour=e_gdppc)) +
+  geom_point() +
+  scale_colour_viridis_c() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  theme_minimal()
+
+```  
+
+## Bivariate associations
+
+In this section we begin to explore whether GDP per capita and democracy are associated with each other, without controlling for any other factors. This is a "bivariate" analysis (i.e. using only two variables). 
+
+We look at the richest and poorest countries, followed by visualizations of the main associations between GDP per capita and democracy.
+
+### Questions to think about as you examine the results:
+* Are the richest countries also the most democratic?
+* Are the poorest countries also the least democratic?
+* Do you think that GDP per capita and democracy are associated with each other based on the visualizations here?
+* Is this association "statistically significant" and what does it mean if it is?
+* Try to recall the hurdles to causality and think about why any associations you might observe might not be causal.
+
+
+
+```{r}
+# What are the 10 observations with the highest GDP per capita?
+modernization_data %>%
+  arrange(desc(e_gdppc)) %>%
+  head(10)
+
+# What are the 10 observations with the lowest GDP per capita?
+modernization_data %>%
+  arrange(e_gdppc) %>%
+  head(10)
+
+
+# Create a scatter plot of Polyarchy score and GDP per capita
+ggplot(modernization_data, aes(y = v2x_polyarchy, x = e_gdppc)) +
+  geom_point() +
+  labs(title = "Scatter Plot of Polyarchy Score and GDP per Capita", x = "Polyarchy Score", y = "GDP per Capita") +
+  theme_minimal()
+
+
+# Add a linear regression line to the scatter plot
+ggplot(modernization_data, aes(y = v2x_polyarchy, x = e_gdppc)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Scatter Plot of Polyarchy Score and GDP per Capita with Regression Line", x = "Polyarchy Score", y = "GDP per Capita") +
+  theme_minimal()
+
+# What is the correlation between Polyarchy score and GDP per capita?
+cor(modernization_data$v2x_polyarchy, modernization_data$e_gdppc, use = "complete.obs")
+
+# Is this correlation between the Polyarchy score and GDP Per Capita "statistically significant"?
+rcorr(as.matrix(modernization_data[, c("v2x_polyarchy", "e_gdppc")]), type = "pearson")
+
+# Make this more intuitive by creating a correlation matrix heatmap
+
+p_mat <- cor_pmat(modernization_data %>%
+                    select(v2x_polyarchy, e_gdppc, e_pop, e_total_oil_income_pc))
+
+modernization_data %>%
+  select(v2x_polyarchy, e_gdppc, e_pop, v2x_polyarchy, e_gdppc, e_pop, e_total_oil_income_pc) %>%
+  cor(use = "complete.obs") %>%
+  ggcorrplot::ggcorrplot(method = "circle", lab = TRUE, p.mat = p_mat)
+
+```
+
+## Multivariate associations
+
+Now we start using "regression" models. These models are often used in the social sciences because they allow researchers to include other variables and "control for" the associations between those alternative variables and the dependent variable. We will start with a bivariate model, which gives the same results as our correlation analysis. We will then start adding control variables. 
+
+You should be aware that there are many diagnostics that can be used to assess whether the model is "robust". These include checking for "heteroskedasticity" (which is the case the variance of the residuals is not constant, often within countries or over time), "autocorrelation" (where residuals are correlated with each other), and "multicollinearity" (where independent variables are correlated with each other). We are not going to talk or assess these here. To my mind the main "robustness" tests that we want to run are thinking about whether these models help us to cross hurdles to causality, but these tests are important things to consider when using regression in your own research.  
+
+Questions to think about as you examine the results:
+* Are GDP per capita and polyarchy positively or negatively associated with each other?
+* What happens to the association between GDP per capita and polyarchy when we add oil wealth as a control variable?
+* What happens to the association when we include other control variables?
+* What other control variables might you want to include in this analysis (if any)
+* Are there remaining issues that still present "hurdles" to causality that we have not crossed?
+
+
+```{r}
+
+
+# Run a linear regression model of the Polyarchy score on GDP per capita
+lm_polyarchy_gdppc <- lm(v2x_polyarchy ~ e_gdppc, data = modernization_data)
+
+# Print the summary of the regression model
+summary(lm_polyarchy_gdppc)
+
+# What is the predicted value of Polyarchy score for a country with a GDP per capita of $500?
+predict(lm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 0.5))
+
+# What is the predicted value of Polyarchy score for a country with a GDP per capita of $10,000?
+predict(lm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 10))
+
+# What is the predicted value of Polyarchy score for a country with a GDP per capita of $20,000?
+predict(lm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 20))
+
+# Plot the "marginal effects" of GDP per capita and on v2x_polyarchy
+ggplot(summary(margins(lm_polyarchy_gdppc)), 
+       aes(x = factor, y = AME, ymin = lower, ymax = upper)) +
+  geom_pointrange() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Average Marginal Effects of GDP per Capita and Oil Income on Polyarchy", x = "Variable", y = "Average Marginal Effect") +
+  theme_minimal()
+
+### ADDING OIL WEALTH AS A CONTROL VARIABLE
+
+
+# Add Oil Wealth as a control variable to the regression model
+lm_polyarchy_gdppc_oil <- lm(v2x_polyarchy ~ e_gdppc + e_total_oil_income_pc, data = modernization_data)
+
+# Print the summary of the regression model
+summary(lm_polyarchy_gdppc_oil)
+
+# Plot the "marginal effects" of GDP per capita and oil on v2x_polyarchy
+ggplot(summary(margins(lm_polyarchy_gdppc_oil)), 
+       aes(x = factor, y = AME, ymin = lower, ymax = upper)) +
+  geom_pointrange() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Average Marginal Effects of GDP per Capita and Oil Income on Polyarchy", x = "Variable", y = "Average Marginal Effect") +
+  theme_minimal()
+
+
+
+### ADDING MORE CONTROL VARIABLES
+
+# Add population and year as controls
+lm_polyarchy_gdppc_oil_pop_year <- lm(v2x_polyarchy ~ e_gdppc + e_total_oil_income_pc + e_pop + year, data = modernization_data)
+
+# Summarise the results
+summary(lm_polyarchy_gdppc_oil_pop_year)
+
+
+
+
+
+
+
+```
+
+
+## Models for different dependent variables
+
+Not all dependent variables are continuous and sometimes linear regression models can produce misleading results for these variables (but this is debated). Another common type of dependent variable is the binary variable where our outcome is the presence or absence of something. In this case we can use models that estimate the probability of an outcome occuring (typically logit or probit models). The example below is one estimate. 
+
+
+```{r}
+
+# What if our dependent variable is a binary variable? We can run a "logit" model instead
+
+# Let's create a binary variable for Polyarchy
+modernization_data$v2x_polyarchy_binary <- ifelse(modernization_data$v2x_polyarchy > 0.5, 1, 0)
+
+# Run a logit model of the binary Polyarchy score on GDP per capita
+glm_polyarchy_gdppc <- glm(v2x_polyarchy_binary ~ e_gdppc, data = modernization_data, family = binomial)
+
+# Print the output of the logit model
+summary(glm_polyarchy_gdppc)
+
+# What is the predicted probability of a country having a Polyarchy score above 0.5 with a GDP per capita of $500?
+predict(glm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 0.5), type = "response")
+
+# What is the predicted probability of a country having a Polyarchy score above 0.5 with a GDP per capita of $10,000?
+predict(glm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 10), type = "response")
+
+# What is the predicted probability of a country having a Polyarchy score above 0.5 with a GDP per capita of $20,000?
+predict(glm_polyarchy_gdppc, newdata = data.frame(e_gdppc = 20), type = "response")
+
+# Plot the "marginal effects" of GDP per capita on the probability of having a Polyarchy score above 0.5
+ggplot(summary(margins(glm_polyarchy_gdppc)), 
+       aes(x = factor, y = AME, ymin = lower, ymax = upper)) +
+  geom_pointrange() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Average Marginal Effects of GDP per Capita on Probability of Polyarchy > 0.5", x = "Variable", y = "Average Marginal Effect") +
+  theme_minimal()
+
+```
+
+## Conclusion
+
+There are many more functions that we can use to analyse these data, and this is just a taste. We can, for example, ask if the association between two variables is dependent upon the value of another variable (an interaction effect). There are models for all types of dependent variables (binary, ordinal, categorical, continuous, count variables). We don't need to make assumptions about the "form" of the relationship either and we can use these methods to make predictions about the future. Machine learning approaches can estimate very complicated relationships between variables and sometimes make accurate predictions if given a lot of data. There are also methods that can approximate experiments, like instrumental variable analysis. 
+
+But it's important to remember the "hurdles" to causal inference that we discussed in class. Because there are associations does not mean that there is causality. Quantitative methods can help us to assess how closely two variables are related (Hurdle 3) and sometimes help us be more confident that alternative explanations are not accounting for our results (Hurdle 4). It can also sometimes helps lessen concerns about reverse causality (Hurdle 2). But it can't help with whether the theory is plausible on logical grounds and there are other ways to approach the "logic" of causal inference using methods such as case studie sor QCA. Theory-building and exploratory theory work is also crucial in political science. 
+
+
+
+```{r}
+
+```
+
+
