@@ -1,0 +1,21 @@
+# Lets assess the relationship if our independent variable (GDP per capita) is binary with a cut-off of $6000 using dplyr
+modernization_data <- modernization_data %>%
+  mutate(e_gdppc_binary = ifelse(e_gdppc > 6, "High", "Low"))
+
+
+# Summarise the mean score for Polyarchy for each level of GDP per capita
+modernization_data %>%
+  group_by(e_gdppc_binary) %>%
+  summarise(mean_polyarchy = mean(v2x_polyarchy, na.rm = TRUE))
+
+# Create a boxplot of Polyarchy score by GDP per capita
+ggplot(modernization_data, aes(x = e_gdppc_binary, y = v2x_polyarchy)) +
+  geom_boxplot(fill = "pink") +
+  labs(title = "Boxplot of Polyarchy Score by GDP per Capita", x = "GDP per Capita", y = "Polyarchy Score") +
+  theme_minimal()
+
+# Is this difference in means statistically significant?
+t.test(v2x_polyarchy ~ e_gdppc_binary, data = modernization_data)
+
+
+# Now let's treat GDP per capita as a continuous variable and examine the association with Polyarchy score
